@@ -40,6 +40,24 @@ if (!Directory.Exists(targetPath))
 
 var files = Directory.GetFiles(targetPath, "*", searchOption);
 
+string ResolveCollision(string path)
+{
+    int count = 1;
+    string dir = Path.GetDirectoryName(path)!;
+    string name = Path.GetFileNameWithoutExtension(path);
+    string ext = Path.GetExtension(path);
+
+    string newPath;
+    do
+    {
+        newPath = Path.Combine(dir, $"{name} ({count++}){ext}");
+    } while (File.Exists(newPath));
+
+    return newPath;
+}
+
+
+
 
 foreach (var file in files)
 {
@@ -48,21 +66,38 @@ foreach (var file in files)
     {
         extension = "NOEXT";
     }
+
     var newDir = Path.Combine(targetPath, extension);
     Directory.CreateDirectory(newDir);
+
     var newPath = Path.Combine(newDir, Path.GetFileName(file));
+
+    // <-- Check for collisions here
+    if (File.Exists(newPath))
+    {
+        newPath = ResolveCollision(newPath);
+    }
+
     if (dryRun)
     {
         Console.WriteLine($"[Dry Run] Would move {file} -> {newPath}");
     }
-
     else
     {
         if (verbose)
-        Console.WriteLine($"Moving {file} -> {newPath}");
-        File.Move(file, newPath);
-
+        {
+            Console.WriteLine($"Moving {file} -> {newPath}");
+        }
+        try
+        {
+            File.Move(file, newPath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error moving {file}: {ex.Message}");
+        }
     }
 }
+
 
 Console.WriteLine("Files organized!");
